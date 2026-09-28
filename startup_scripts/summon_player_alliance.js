@@ -22,16 +22,6 @@ function mce2AreAlliedPlayers(owner, other) {
   return false
 }
 
-function mce2GetMagicSummonFromDamage(source) {
-  const direct = source.getDirectEntity()
-  if (direct instanceof MCE2_IMagicSummon) return direct
-
-  const causing = source.getEntity()
-  if (causing instanceof MCE2_IMagicSummon) return causing
-
-  return null
-}
-
 // Cataclysm summons can inherit hostile Player-target goals from their base mobs.
 ForgeEvents.onEvent('net.minecraftforge.event.entity.living.LivingChangeTargetEvent', event => {
   const summon = event.getEntity()
@@ -46,18 +36,4 @@ ForgeEvents.onEvent('net.minecraftforge.event.entity.living.LivingChangeTargetEv
   }
 })
 
-// Safety net for an attack/beam already committed before its allied target was cleared.
-ForgeEvents.onEvent('net.minecraftforge.event.entity.living.LivingAttackEvent', event => {
-  const victim = event.getEntity()
-  if (!(victim instanceof MCE2_ServerPlayer)) return
-
-  const summon = mce2GetMagicSummonFromDamage(event.getSource())
-  if (summon == null) return
-
-  const owner = summon.getSummoner()
-  if (mce2AreAlliedPlayers(owner, victim)) {
-    event.setCanceled(true)
-  }
-})
-
-console.info('[MCE2] Summon player-alliance Forge protection registered.')
+console.info('[MCE2] Summon player-alliance target protection registered.')
