@@ -9,32 +9,37 @@ function mce2AreAlliedPlayers(owner, other) {
   if (!(owner instanceof MCE2_ServerPlayer) || !(other instanceof MCE2_ServerPlayer)) return false
   if (owner === other) return true
 
-  try {
-    const api = MCE2_FTBTeamsAPI.api()
-    if (api == null || !api.isManagerLoaded()) return false
+  const api = MCE2_FTBTeamsAPI.api()
+  if (api == null || !api.isManagerLoaded()) return false
 
-    const manager = api.getManager()
-    const ownerTeam = manager.getTeamForPlayer(owner)
-    const otherTeam = manager.getTeamForPlayer(other)
+  const manager = api.getManager()
+  const ownerTeam = manager.getTeamForPlayer(owner)
+  const otherTeam = manager.getTeamForPlayer(other)
 
-    if (!ownerTeam.isPresent() || !otherTeam.isPresent()) return false
-    return ownerTeam.get().getId().equals(otherTeam.get().getId())
-  } catch (ignored) {
-    return false
-  }
+  if (!ownerTeam.isPresent() || !otherTeam.isPresent()) return false
+  return ownerTeam.get().getId().equals(otherTeam.get().getId())
 }
 
 // Cataclysm summons can inherit hostile Player-target goals from their base mobs.
+// Never allow a compatibility-hook failure to escape into the entity tick.
+let mce2AllianceHookErrorLogged = false
 ForgeEvents.onEvent('net.minecraftforge.event.entity.living.LivingChangeTargetEvent', event => {
-  const summon = event.getEntity()
-  const target = event.getNewTarget()
+  try {
+    const summon = event.getEntity()
+    const target = event.getNewTarget()
 
-  if (!(summon instanceof MCE2_IMagicSummon)) return
-  if (!(target instanceof MCE2_ServerPlayer)) return
+    if (!(summon instanceof MCE2_IMagicSummon)) return
+    if (!(target instanceof MCE2_ServerPlayer)) return
 
-  const owner = summon.getSummoner()
-  if (mce2AreAlliedPlayers(owner, target)) {
-    event.setCanceled(true)
+    const owner = summon.getSummoner()
+    if (mce2AreAlliedPlayers(owner, target)) {
+      event.setCanceled(true)
+    }
+  } catch (error) {
+    if (!mce2AllianceHookErrorLogged) {
+      mce2AllianceHookErrorLogged = true
+      console.error('[MCE2] Summon player-alliance target hook failed safely: ' + error)
+    }
   }
 })
 
