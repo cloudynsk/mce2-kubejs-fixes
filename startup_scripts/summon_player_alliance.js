@@ -34,7 +34,7 @@ ForgeEvents.onEvent('net.minecraftforge.event.entity.living.LivingChangeTargetEv
 
   const owner = summon.getSummoner()
   if (mce2AreAlliedPlayers(owner, target)) {
-    event.setNewTarget(null)
+    event.setCanceled(true)
   }
 })
 
