@@ -7,19 +7,21 @@ const MCE2_FTBTeamsAPI = Java.loadClass('dev.ftb.mods.ftbteams.api.FTBTeamsAPI')
 
 function mce2AreAlliedPlayers(owner, other) {
   if (!(owner instanceof MCE2_ServerPlayer) || !(other instanceof MCE2_ServerPlayer)) return false
-  if (owner.getUUID().equals(other.getUUID())) return true
-  if (owner.isAlliedTo(other) || other.isAlliedTo(owner)) return true
+  if (owner === other) return true
 
   try {
     const api = MCE2_FTBTeamsAPI.api()
-    if (api != null && api.isManagerLoaded()) {
-      return api.getManager().arePlayersInSameTeam(owner.getUUID(), other.getUUID())
-    }
-  } catch (ignored) {
-    // Keep vanilla alliance behavior if FTB Teams is temporarily unavailable.
-  }
+    if (api == null || !api.isManagerLoaded()) return false
 
-  return false
+    const manager = api.getManager()
+    const ownerTeam = manager.getTeamForPlayer(owner)
+    const otherTeam = manager.getTeamForPlayer(other)
+
+    if (!ownerTeam.isPresent() || !otherTeam.isPresent()) return false
+    return ownerTeam.get().getId().equals(otherTeam.get().getId())
+  } catch (ignored) {
+    return false
+  }
 }
 
 // Cataclysm summons can inherit hostile Player-target goals from their base mobs.
@@ -36,4 +38,4 @@ ForgeEvents.onEvent('net.minecraftforge.event.entity.living.LivingChangeTargetEv
   }
 })
 
-console.info('[MCE2] Summon player-alliance target protection registered.')
+console.info('[MCE2] Summon player-alliance Forge protection registered.')
