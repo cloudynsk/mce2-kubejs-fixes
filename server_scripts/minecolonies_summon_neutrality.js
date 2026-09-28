@@ -4,6 +4,10 @@
 const $IColonyManager = Java.loadClass('com.minecolonies.api.colony.IColonyManager')
 const $EntityListModule = Java.loadClass('com.minecolonies.core.colony.buildings.modules.EntityListModule')
 const $ResourceLocation = Java.loadClass('net.minecraft.resources.ResourceLocation')
+const $IMagicSummon = Java.loadClass('io.redspace.ironsspellbooks.entity.mobs.IMagicSummon')
+const $ServerPlayer = Java.loadClass('net.minecraft.server.level.ServerPlayer')
+const $MineColoniesCitizen = Java.loadClass('com.minecolonies.api.entity.citizen.AbstractEntityCitizen')
+const $FTBTeamsAPI = Java.loadClass('dev.ftb.mods.ftbteams.api.FTBTeamsAPI')
 
 const MCE2_FRIENDLY_SUMMONS = [
   'cataclysm_spellbooks:summoned_ignited_revenant',
@@ -32,6 +36,62 @@ ServerEvents.tags('entity_type', event => {
     event.add('minecolonies:mob_attack_blacklist', entityType)
   })
 })
+
+function mce2GetDamageSummon(source) {
+  const actual = source.getActual()
+  if (actual instanceof $IMagicSummon) return actual
+
+  const immediate = source.getImmediate()
+  if (immediate instanceof $IMagicSummon) return immediate
+
+  return null
+}
+
+function mce2AreDamageAllies(owner, other) {
+  if (!(owner instanceof $ServerPlayer) || !(other instanceof $ServerPlayer)) return false
+  if (owner === other) return true
+
+  const api = $FTBTeamsAPI.api()
+  if (api == null || !api.isManagerLoaded()) return false
+
+  const manager = api.getManager()
+  const ownerTeam = manager.getTeamForPlayer(owner)
+  const otherTeam = manager.getTeamForPlayer(other)
+
+  if (!ownerTeam.isPresent() || !otherTeam.isPresent()) return false
+  return ownerTeam.get().getId().equals(otherTeam.get().getId())
+}
+
+// Protect MineColonies citizens from direct and collateral summon damage.
+// Also protects the summoner and same-FTB-team players from summon AoE/projectile damage.
+let mce2SummonDamageHookErrorLogged = false
+EntityEvents.hurt(event => {
+  let shouldCancel = false
+
+  try {
+    const victim = event.entity
+
+    if (!(victim instanceof $MineColoniesCitizen) && !(victim instanceof $ServerPlayer)) return
+
+    const summon = mce2GetDamageSummon(event.source)
+    if (summon == null) return
+
+    if (victim instanceof $MineColoniesCitizen) {
+      shouldCancel = true
+    } else {
+      shouldCancel = mce2AreDamageAllies(summon.getSummoner(), victim)
+    }
+  } catch (error) {
+    if (!mce2SummonDamageHookErrorLogged) {
+      mce2SummonDamageHookErrorLogged = true
+      console.error('[MCE2] Summon damage-neutrality hook failed safely: ' + error)
+    }
+    return
+  }
+
+  if (shouldCancel) event.cancel()
+})
+
 
 function patchMineColoniesGuardTargets() {
   let changedBuildings = 0
