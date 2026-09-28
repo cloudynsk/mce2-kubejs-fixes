@@ -20,13 +20,16 @@ Then fully restart the server. The startup script registers a Forge target-chang
   - makes MineColonies guard buildings ignore those summon entity types
 
 - `startup_scripts/summon_player_alliance.js`
-  - prevents Iron's `IMagicSummon` entities from accepting an allied player as a target
-  - treats the summoner and players in the same FTB Team as friendly
+  - prevents Iron's `IMagicSummon` entities from accepting MineColonies citizens or guards as targets
+  - prevents summons from accepting the summoner or players in the same FTB Team as targets
+  - covers Counterspell Watchers, whose own AI explicitly targets all `Mob` entities, including MineColonies citizens
   - uses FTB Teams' `getTeamForPlayer(ServerPlayer)` API instead of raw Minecraft UUID methods, which are not safely exposed to Rhino in this MCE2 runtime
 
-### Prowler root cause
+### Cataclysm summon AI root causes
 
 Cataclysm's normal Prowler registers a `NearestAttackableTargetGoal<Player>`. The summoned Prowler calls the parent goal registration, so the player-targeting goal can still be present.
+
+The normal Watcher has the same inherited-target-goal pattern. `SummonedCounterspellWatcher` additionally registers `NearestAttackableTargetGoal<Mob>`, which can directly select MineColonies citizens because they are mob entities. The startup hook blocks MineColonies citizen targets regardless of which AI goal proposed them.
 
 ### Known environment
 
