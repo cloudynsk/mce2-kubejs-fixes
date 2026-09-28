@@ -47,9 +47,9 @@ ForgeEvents.onEvent('net.minecraftforge.event.entity.living.LivingChangeTargetEv
   } catch (error) {
     if (!mce2AllianceHookErrorLogged) {
       mce2AllianceHookErrorLogged = true
-      console.error('[MCE2] Summon player-alliance target hook failed safely: ' + error)
+      console.error('[MCE2] Summon target-neutrality hook failed safely: ' + error)
     }
   }
 })
 
-console.info('[MCE2] Summon player-alliance Forge protection registered.')
+console.info('[MCE2] Summon target-neutrality Forge protection registered.')
