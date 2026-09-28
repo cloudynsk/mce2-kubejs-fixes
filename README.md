@@ -1,142 +1,45 @@
 # mce2-kubejs-fixes
 
-Small KubeJS compatibility fixes developed for **Minecraft Eternal 2 (MCE2)**.
+Small KubeJS compatibility fixes for Minecraft Eternal 2 (Minecraft 1.20.1).
 
-## MineColonies summon neutrality
+## MineColonies + summon neutrality
 
-File:
-
-`server_scripts/minecolonies_summon_neutrality.js`
-
-This patch fixes several interactions between:
-
-- MineColonies
-- Iron's Spells 'n Spellbooks
-- Cataclysm Spellbooks
-- FTB Teams
-- KubeJS
-
-### What it fixes
-
-The script handles three separate hostility paths:
-
-1. **Summons attacking MineColonies citizens**
-   - Adds supported summon entity types to `minecolonies:mob_attack_blacklist`.
-   - This prevents MineColonies from injecting citizen-targeting AI into those summons.
-
-2. **MineColonies guards attacking summons**
-   - Adds the summon entity types to each guard building's persistent `hostiles` ignore list.
-   - Existing guard buildings are patched when the script loads.
-   - Newly created guard buildings are checked periodically.
-
-3. **Summons attacking the summoner's teammates**
-   - Intercepts Forge target changes for Iron's `IMagicSummon` entities.
-   - Protects the summoner, vanilla-team allies, and players in the same FTB Team.
-   - Also cancels incoming summon damage to protected teammates as a safety net for attacks or beams that were already committed before the target was cleared.
-
-### Why the Prowler is especially aggressive
-
-Cataclysm Spellbooks' `SummonedProwler` inherits Cataclysm's normal Prowler AI.
-
-The base Prowler adds a player target goal:
-
-```java
-new NearestAttackableTargetGoal<>(this, Player.class, true)
-```
-
-The summoned Prowler attempts to remove hostile target goals, but the inherited target goal can still remain active after `super.registerGoals()`. The result is a summon that can actively acquire nearby players as targets instead of merely retaliating.
-
-This patch rejects allied player targets before the summon accepts them and also blocks allied-player damage as a fallback.
-
-### Supported summon IDs
-
-Cataclysm Spellbooks:
-
-- `cataclysm_spellbooks:summoned_ignited_revenant`
-- `cataclysm_spellbooks:summoned_ignited_berserker`
-- `cataclysm_spellbooks:summoned_koboldiator`
-- `cataclysm_spellbooks:summoned_koboleton`
-- `cataclysm_spellbooks:summoned_draugur`
-- `cataclysm_spellbooks:summoned_royal_draugur`
-- `cataclysm_spellbooks:summoned_elite_draugur`
-- `cataclysm_spellbooks:summoned_aptrgangr`
-- `cataclysm_spellbooks:summoned_watcher`
-- `cataclysm_spellbooks:summoned_prowler`
-- `cataclysm_spellbooks:summoned_counterspell_watcher`
-- `cataclysm_spellbooks:summoned_amethyst_crab`
-- `cataclysm_spellbooks:summoned_coral_golem`
-- `cataclysm_spellbooks:summoned_coralssus`
-- `cataclysm_spellbooks:summoned_clawdian`
-
-Iron's Spells:
-
-- `irons_spellbooks:summoned_vex`
-- `irons_spellbooks:summoned_zombie`
-- `irons_spellbooks:summoned_skeleton`
-- `irons_spellbooks:summoned_polar_bear`
-
-## Installation
-
-Copy:
+Install both files into the matching folders:
 
 ```text
-server_scripts/minecolonies_summon_neutrality.js
+kubejs/server_scripts/minecolonies_summon_neutrality.js
+kubejs/startup_scripts/summon_player_alliance.js
 ```
 
-to the server's:
+Then fully restart the server. The startup script registers a Forge target-change listener, so `/reload` alone is not enough.
 
-```text
-kubejs/server_scripts/
-```
+### What the files do
 
-Then restart the server.
+- `server_scripts/minecolonies_summon_neutrality.js`
+  - adds supported summons to `minecolonies:mob_attack_blacklist`
+  - makes MineColonies guard buildings ignore those summon entity types
 
-A full restart is recommended after first installation so entity tags, Forge event handlers, and MineColonies state all start cleanly.
+- `startup_scripts/summon_player_alliance.js`
+  - prevents Iron's `IMagicSummon` entities from accepting an allied player as a target
+  - treats the summoner and players in the same FTB Team as friendly
+  - uses FTB Teams' `getTeamForPlayer(ServerPlayer)` API instead of raw Minecraft UUID methods, which are not safely exposed to Rhino in this MCE2 runtime
 
-For an already-running server, `/reload` may load the script, but use freshly summoned entities when testing because an existing mob may already have a target or attack animation in progress.
+### Prowler root cause
 
-## Known working environment
+Cataclysm's normal Prowler registers a `NearestAttackableTargetGoal<Player>`. The summoned Prowler calls the parent goal registration, so the player-targeting goal can still be present.
 
-This patch was developed against an MCE2 Minecraft 1.20.1 server using:
+### Known environment
 
+- Minecraft 1.20.1
 - Forge 47.4.2
+- KubeJS 6 / Rhino 2001.2.3-build.6
+- FTB Teams 2001.3.2
 - Iron's Spells 'n Spellbooks 3.15.6
 - Cataclysm Spellbooks 1.2.8
+- L_Ender's Cataclysm 3.16
 - MineColonies
-- FTB Teams
-- KubeJS
 
-It uses Java classes from those mods directly and is intended for this modpack/environment. Other versions may rename classes, methods, or entity IDs.
-
-## Team behavior
-
-The player-friendly logic considers these relationships friendly:
-
-- the summon owner
-- vanilla Minecraft scoreboard-team allies
-- players in the same FTB Team
-
-MCE2 configures Open Parties and Claims to use `ftb_teams` as its primary party system, so players using that same FTB Team are covered.
-
-Players who are not allied by those rules are not made universally immune to summons.
-
-## Background
-
-The MineColonies side of this problem is related to:
-
-- Iron's Spells issue #664: https://github.com/iron431/Irons-Spells-n-Spellbooks/issues/664
-
-The Iron's Spells maintainer specifically pointed to MineColonies' `mobAttackBlacklist` for the citizen-targeting side. The guard-targeting and allied-player cases require additional handling, which is what this script provides.
-
-## Integrity
-
-The initial published script was copied from the verified live server version.
-
-Initial source SHA-256:
-
-```text
-9e30067355bc455d148e5d1bf1143a0603493db4328b48c8aa170056d653e354
-```
+This is an unofficial compatibility patch. Other versions may require changes.
 
 ## License
 
