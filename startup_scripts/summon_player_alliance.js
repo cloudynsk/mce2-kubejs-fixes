@@ -3,6 +3,7 @@
 
 const MCE2_IMagicSummon = Java.loadClass('io.redspace.ironsspellbooks.entity.mobs.IMagicSummon')
 const MCE2_ServerPlayer = Java.loadClass('net.minecraft.server.level.ServerPlayer')
+const MCE2_MineColoniesCitizen = Java.loadClass('com.minecolonies.api.entity.citizen.AbstractEntityCitizen')
 const MCE2_FTBTeamsAPI = Java.loadClass('dev.ftb.mods.ftbteams.api.FTBTeamsAPI')
 
 function mce2AreAlliedPlayers(owner, other) {
@@ -29,6 +30,14 @@ ForgeEvents.onEvent('net.minecraftforge.event.entity.living.LivingChangeTargetEv
     const target = event.getNewTarget()
 
     if (!(summon instanceof MCE2_IMagicSummon)) return
+
+    // MineColonies citizens and guards must stay neutral to player summons,
+    // including Counterspell Watchers that explicitly target all Mob entities.
+    if (target instanceof MCE2_MineColoniesCitizen) {
+      event.setCanceled(true)
+      return
+    }
+
     if (!(target instanceof MCE2_ServerPlayer)) return
 
     const owner = summon.getSummoner()
