@@ -1,5 +1,5 @@
-// Keep MineColonies citizens and supported player summons mutually neutral.
-// MCE2 local compatibility patch for Cataclysm Spellbooks + Iron's Spells.
+// Keep MineColonies citizens, guards, and players neutral to player-owned magic summons.
+// MCE2 compatibility patch for Cataclysm Spellbooks + Iron's Spells.
 
 const $IColonyManager = Java.loadClass('com.minecolonies.api.colony.IColonyManager')
 const $EntityListModule = Java.loadClass('com.minecolonies.core.colony.buildings.modules.EntityListModule')
@@ -7,7 +7,7 @@ const $ResourceLocation = Java.loadClass('net.minecraft.resources.ResourceLocati
 const $IMagicSummon = Java.loadClass('io.redspace.ironsspellbooks.entity.mobs.IMagicSummon')
 const $ServerPlayer = Java.loadClass('net.minecraft.server.level.ServerPlayer')
 const $MineColoniesCitizen = Java.loadClass('com.minecolonies.api.entity.citizen.AbstractEntityCitizen')
-const $FTBTeamsAPI = Java.loadClass('dev.ftb.mods.ftbteams.api.FTBTeamsAPI')
+const $DeathLaserBeam = Java.loadClass('com.github.L_Ender.cataclysm.entity.projectile.Death_Laser_Beam_Entity')
 
 const MCE2_FRIENDLY_SUMMONS = [
   'cataclysm_spellbooks:summoned_ignited_revenant',
@@ -44,26 +44,18 @@ function mce2GetDamageSummon(source) {
   const immediate = source.getImmediate()
   if (immediate instanceof $IMagicSummon) return immediate
 
+  // Cataclysm's Prowler death laser is a separate beam entity whose public
+  // caster field points back to the Prowler that created it.
+  if (immediate instanceof $DeathLaserBeam) {
+    const caster = immediate.caster
+    if (caster instanceof $IMagicSummon) return caster
+  }
+
   return null
 }
 
-function mce2AreDamageAllies(owner, other) {
-  if (!(owner instanceof $ServerPlayer) || !(other instanceof $ServerPlayer)) return false
-  if (owner === other) return true
-
-  const api = $FTBTeamsAPI.api()
-  if (api == null || !api.isManagerLoaded()) return false
-
-  const manager = api.getManager()
-  const ownerTeam = manager.getTeamForPlayer(owner)
-  const otherTeam = manager.getTeamForPlayer(other)
-
-  if (!ownerTeam.isPresent() || !otherTeam.isPresent()) return false
-  return ownerTeam.get().getId().equals(otherTeam.get().getId())
-}
-
-// Protect MineColonies citizens from direct and collateral summon damage.
-// Also protects the summoner and same-FTB-team players from summon AoE/projectile damage.
+// Protect every player and MineColonies citizen from direct/projectile/AoE
+// damage caused by player-owned magic summons.
 let mce2SummonDamageHookErrorLogged = false
 EntityEvents.hurt(event => {
   let shouldCancel = false
@@ -76,11 +68,7 @@ EntityEvents.hurt(event => {
     const summon = mce2GetDamageSummon(event.source)
     if (summon == null) return
 
-    if (victim instanceof $MineColoniesCitizen) {
-      shouldCancel = true
-    } else {
-      shouldCancel = mce2AreDamageAllies(summon.getSummoner(), victim)
-    }
+    shouldCancel = true
   } catch (error) {
     if (!mce2SummonDamageHookErrorLogged) {
       mce2SummonDamageHookErrorLogged = true
@@ -91,7 +79,6 @@ EntityEvents.hurt(event => {
 
   if (shouldCancel) event.cancel()
 })
-
 
 function patchMineColoniesGuardTargets() {
   let changedBuildings = 0
