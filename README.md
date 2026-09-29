@@ -27,6 +27,7 @@ Then fully restart the server. The startup script registers a Forge target-chang
 - player-owned `IMagicSummon` entities are treated as non-PvP
 - they cannot accept any `ServerPlayer` as a target
 - direct, projectile, beam, and AoE summon damage to any player is cancelled
+- a Forge-level `LivingAttackEvent` barrier runs before damage is applied, with the reloadable `EntityEvents.hurt` hook retained as a second independent barrier
 - Cataclysm's Prowler death laser is handled explicitly through its beam entity's public caster reference
 - this intentionally avoids depending on FTB Teams for the safety boundary
 
@@ -44,6 +45,10 @@ Notable inherited/explicit targeting found in the base mobs:
 - several Cataclysm base mobs perform area attacks over nearby `LivingEntity` instances; some only exclude entities considered allied by vanilla/mod logic, while at least one Amethyst Crab area attack does not use the summon alliance check at all.
 
 The compatibility scripts therefore block both target acquisition and resulting summon damage instead of trying to rewrite every individual AI goal list.
+
+### Residual non-damage collateral
+
+Coral Golem and Coralssus base attacks directly call `Entity.push()` on nearby non-allied living entities as part of their area attacks. Damage to players/citizens is blocked, but a nearby player can still be physically launched while the summon is attacking a legitimate hostile target. This is not a target-acquisition bypass and does not bypass the damage shields; fully suppressing that direct physics side effect would require a dedicated Java/mixin patch rather than a clean KubeJS damage/target event.
 
 ## Iron's built-in summon audit
 
