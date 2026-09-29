@@ -22,11 +22,13 @@ Then fully restart the server. The startup script registers a Forge target-chang
 - any Iron's `IMagicSummon` is prevented from accepting an `AbstractEntityCitizen` as a target
 - direct and collateral summon damage to MineColonies citizens is cancelled with KubeJS `EntityEvents.hurt`
 
-### Allied players
+### Players
 
-- magic summons cannot accept their owner or same-FTB-team players as targets
-- direct, projectile, and AoE summon damage to those allied players is cancelled
-- FTB Teams is queried through `getTeamForPlayer(ServerPlayer)`, avoiding raw Minecraft UUID methods that are unsafe through Rhino in this runtime
+- player-owned `IMagicSummon` entities are treated as non-PvP
+- they cannot accept any `ServerPlayer` as a target
+- direct, projectile, beam, and AoE summon damage to any player is cancelled
+- Cataclysm's Prowler death laser is handled explicitly through its beam entity's public caster reference
+- this intentionally avoids depending on FTB Teams for the safety boundary
 
 ## Cataclysm Spellbooks summon audit
 
@@ -73,7 +75,7 @@ Summoned weapon entities are spell entities rather than AI mob summons and are o
 
 ## Runtime-safety notes
 
-The installed KubeJS jar maps JavaScript `DamageSource.getActual()` and `getImmediate()` to the runtime Minecraft methods. The damage hook uses those supported KubeJS names and has a fail-safe error boundary.
+The installed KubeJS jar maps JavaScript `DamageSource.getActual()` and `getImmediate()` to the runtime Minecraft methods. The damage hook uses those supported KubeJS names, explicitly resolves Cataclysm's death-laser beam caster, and has a fail-safe error boundary.
 
 The older experimental use of `DamageSource.getDirectEntity()` and raw `ServerPlayer.getUUID()` was removed because those names are not exposed under those Mojang mappings in this Rhino runtime.
 
