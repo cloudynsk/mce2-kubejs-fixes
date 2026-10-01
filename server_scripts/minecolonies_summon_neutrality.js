@@ -43,30 +43,27 @@ ServerEvents.tags('entity_type', event => {
 // their summon goals, which re-adds the base mob's priority-2 player scanner.
 // Remove that scanner directly when the summon enters the world.
 //
-// These use the verified Forge 1.20.1 runtime/SRG names intentionally:
-// Mob.f_21346_                     -> targetSelector
-// GoalSelector.m_148105_()         -> getAvailableGoals()
-// WrappedGoal.m_26012_()           -> getPriority()
-// WrappedGoal.m_26015_()           -> getGoal()
-// GoalSelector.m_25363_(goal)       -> removeGoal(goal)
+// Forge 1.20.1 exposes Mob.targetSelector publicly, and GoalSelector /
+// WrappedGoal expose the Mojmap methods below. Use those public names here;
+// the SRG field name is not exposed as a Rhino property in this KubeJS runtime.
 let mce2GoalSanitizerErrorLogged = false
 EntityEvents.spawned(event => {
   try {
     var entity = event.entity
     if (!(entity instanceof $IMagicSummon)) return
 
-    var selector = entity.f_21346_
-    var wrappedGoals = selector.m_148105_().toArray()
+    var selector = entity.targetSelector
+    var wrappedGoals = selector.getAvailableGoals().toArray()
     var removed = 0
 
     for (var i = 0; i < wrappedGoals.length; i++) {
       var wrapped = wrappedGoals[i]
-      if (wrapped.m_26012_() !== 2) continue
+      if (wrapped.getPriority() !== 2) continue
 
-      var goal = wrapped.m_26015_()
+      var goal = wrapped.getGoal()
       if (!(goal instanceof $NearestAttackableTargetGoal)) continue
 
-      selector.m_25363_(goal)
+      selector.removeGoal(goal)
       removed++
     }
 
