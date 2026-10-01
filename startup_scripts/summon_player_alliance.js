@@ -26,8 +26,8 @@ function mce2ResolveSummonDamageSource(source) {
 let mce2TargetNeutralityHookErrorLogged = false
 ForgeEvents.onEvent('net.minecraftforge.event.entity.living.LivingChangeTargetEvent', event => {
   try {
-    const summon = event.getEntity()
-    const target = event.getNewTarget()
+    var summon = event.getEntity()
+    var target = event.getNewTarget()
 
     if (!(summon instanceof MCE2_IMagicSummon)) return
 
@@ -48,7 +48,7 @@ ForgeEvents.onEvent('net.minecraftforge.event.entity.living.LivingChangeTargetEv
 let mce2AttackNeutralityHookErrorLogged = false
 ForgeEvents.onEvent('net.minecraftforge.event.entity.living.LivingAttackEvent', event => {
   try {
-    const victim = event.getEntity()
+    var victim = event.getEntity()
     if (!(victim instanceof MCE2_ServerPlayer) && !(victim instanceof MCE2_MineColoniesCitizen)) return
 
     if (mce2ResolveSummonDamageSource(event.getSource()) != null) {
