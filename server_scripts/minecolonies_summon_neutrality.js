@@ -52,18 +52,18 @@ ServerEvents.tags('entity_type', event => {
 let mce2GoalSanitizerErrorLogged = false
 EntityEvents.spawned(event => {
   try {
-    const entity = event.entity
+    var entity = event.entity
     if (!(entity instanceof $IMagicSummon)) return
 
-    const selector = entity.f_21346_
-    const wrappedGoals = selector.m_148105_().toArray()
-    let removed = 0
+    var selector = entity.f_21346_
+    var wrappedGoals = selector.m_148105_().toArray()
+    var removed = 0
 
-    for (let i = 0; i < wrappedGoals.length; i++) {
-      const wrapped = wrappedGoals[i]
+    for (var i = 0; i < wrappedGoals.length; i++) {
+      var wrapped = wrappedGoals[i]
       if (wrapped.m_26012_() !== 2) continue
 
-      const goal = wrapped.m_26015_()
+      var goal = wrapped.m_26015_()
       if (!(goal instanceof $NearestAttackableTargetGoal)) continue
 
       selector.m_25363_(goal)
@@ -102,14 +102,14 @@ function mce2GetDamageSummon(source) {
 // damage caused by player-owned magic summons.
 let mce2SummonDamageHookErrorLogged = false
 EntityEvents.hurt(event => {
-  let shouldCancel = false
+  var shouldCancel = false
 
   try {
-    const victim = event.entity
+    var victim = event.entity
 
     if (!(victim instanceof $MineColoniesCitizen) && !(victim instanceof $ServerPlayer)) return
 
-    const summon = mce2GetDamageSummon(event.source)
+    var summon = mce2GetDamageSummon(event.source)
     if (summon == null) return
 
     shouldCancel = true
