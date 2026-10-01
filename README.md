@@ -84,6 +84,10 @@ Summoned weapon entities are spell entities rather than AI mob summons and are o
 - L_Ender's Cataclysm 3.16
 - MineColonies 1.1.1240-snapshot
 
+## Rhino callback scoping
+
+This pack uses Rhino 2001.2.3-build.6. In this runtime, `const` declarations inside repeatedly executed `try {}` event callbacks can fail with `TypeError: redeclaration of var ...`. Event-local variables inside those callbacks therefore use `var` intentionally.
+
 ## Runtime-safety notes
 
 The installed KubeJS jar maps JavaScript `DamageSource.getActual()` and `getImmediate()` to the runtime Minecraft methods. The damage hook uses those supported KubeJS names, explicitly resolves Cataclysm's death-laser beam caster, and has a fail-safe error boundary.
