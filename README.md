@@ -31,6 +31,12 @@ Then fully restart the server. The startup script registers a Forge target-chang
 - Cataclysm's Prowler death laser is handled explicitly through its beam entity's public caster reference
 - this intentionally avoids depending on FTB Teams for the safety boundary
 
+### Direct inherited-goal sanitizer
+
+As an additional defense, the server script listens to `EntityEvents.spawned` and directly removes priority-2 `NearestAttackableTargetGoal` instances from newly spawned `IMagicSummon` entities. This removes the inherited Cataclysm player scanner itself instead of relying only on a later target-change cancellation event.
+
+The sanitizer intentionally uses the verified Forge 1.20.1 runtime/SRG members for the AI selector path. Counterspell Watcher's explicit priority-3 `Mob` scanner is preserved.
+
 ## Cataclysm Spellbooks summon audit
 
 All 15 Cataclysm Spellbooks mob summons implement Iron's `IMagicSummon`.
