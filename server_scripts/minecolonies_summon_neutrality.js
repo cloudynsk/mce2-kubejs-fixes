@@ -8,6 +8,7 @@ const $IMagicSummon = Java.loadClass('io.redspace.ironsspellbooks.entity.mobs.IM
 const $ServerPlayer = Java.loadClass('net.minecraft.server.level.ServerPlayer')
 const $MineColoniesCitizen = Java.loadClass('com.minecolonies.api.entity.citizen.AbstractEntityCitizen')
 const $DeathLaserBeam = Java.loadClass('com.github.L_Ender.cataclysm.entity.projectile.Death_Laser_Beam_Entity')
+const $NearestAttackableTargetGoal = Java.loadClass('net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal')
 
 const MCE2_FRIENDLY_SUMMONS = [
   'cataclysm_spellbooks:summoned_ignited_revenant',
@@ -35,6 +36,49 @@ ServerEvents.tags('entity_type', event => {
   MCE2_FRIENDLY_SUMMONS.forEach(entityType => {
     event.add('minecolonies:mob_attack_blacklist', entityType)
   })
+})
+
+
+// Cataclysm Spellbooks summon classes call super.registerGoals() after adding
+// their summon goals, which re-adds the base mob's priority-2 player scanner.
+// Remove that scanner directly when the summon enters the world.
+//
+// These use the verified Forge 1.20.1 runtime/SRG names intentionally:
+// Mob.f_21346_                     -> targetSelector
+// GoalSelector.m_148105_()         -> getAvailableGoals()
+// WrappedGoal.m_26012_()           -> getPriority()
+// WrappedGoal.m_26015_()           -> getGoal()
+// GoalSelector.m_25363_(goal)       -> removeGoal(goal)
+let mce2GoalSanitizerErrorLogged = false
+EntityEvents.spawned(event => {
+  try {
+    const entity = event.entity
+    if (!(entity instanceof $IMagicSummon)) return
+
+    const selector = entity.f_21346_
+    const wrappedGoals = selector.m_148105_().toArray()
+    let removed = 0
+
+    for (let i = 0; i < wrappedGoals.length; i++) {
+      const wrapped = wrappedGoals[i]
+      if (wrapped.m_26012_() !== 2) continue
+
+      const goal = wrapped.m_26015_()
+      if (!(goal instanceof $NearestAttackableTargetGoal)) continue
+
+      selector.m_25363_(goal)
+      removed++
+    }
+
+    if (removed > 0) {
+      console.info('[MCE2] Removed ' + removed + ' inherited player-target goal(s) from ' + entity.type)
+    }
+  } catch (error) {
+    if (!mce2GoalSanitizerErrorLogged) {
+      mce2GoalSanitizerErrorLogged = true
+      console.error('[MCE2] Summon target-goal sanitizer failed safely: ' + error)
+    }
+  }
 })
 
 function mce2GetDamageSummon(source) {
